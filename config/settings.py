@@ -12,7 +12,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'BHommlfCUzsShqBAsrxei3wKf7NKZ9IQofq7DVCGDUbbsnH82UbwcRSdoElTEirT'
 
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = [
     'msumarijr.store',
