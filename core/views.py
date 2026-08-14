@@ -1692,7 +1692,7 @@ def export_csv(request,kind):
         return HttpResponse('Unknown export.',status=404)
     headers,rows=_export_payload(kind,start,end)
     data=_csv_bytes(headers,rows)
-    filename=f'mega_fish_point_{kind}_{start}_{end}.csv'
+    filename=f'msumari_jr_{kind}_{start}_{end}.csv'
     response=HttpResponse(data,content_type='text/csv; charset=utf-8')
     response['Content-Disposition']=f'attachment; filename="{filename}"'
     return response
@@ -1707,9 +1707,9 @@ def export_all_zip(request):
         for kind in kinds:
             headers,rows=_export_payload(kind,start,end)
             archive.writestr(f'{kind}.csv',_csv_bytes(headers,rows))
-        archive.writestr('README.txt',f'Mega Fish Point exports\nPeriod: {start} to {end}\nStock and Debts files are current-position exports.\n')
+        archive.writestr('README.txt',f'Msumari jr exports\nPeriod: {start} to {end}\nStock and Debts files are current-position exports.\n')
     response=HttpResponse(buffer.getvalue(),content_type='application/zip')
-    response['Content-Disposition']=f'attachment; filename="mega_fish_point_exports_{start}_{end}.zip"'
+    response['Content-Disposition']=f'attachment; filename="msumari_jr_exports_{start}_{end}.zip"'
     return response
 
 
@@ -1748,9 +1748,9 @@ def backup_download(request):
                         rel=os.path.relpath(full,media_root)
                         archive.write(full,arcname=os.path.join('media',rel))
             archive.writestr('RESTORE_README.txt',
-                'Mega Fish Point backup\n\n1. Stop Django.\n2. Back up the current db.sqlite3.\n3. Replace it with database/db.sqlite3 from this ZIP.\n4. Restore the media folder beside manage.py if needed.\n5. Start Django and run python manage.py check.\n')
+                'Msumari jr backup\n\n1. Stop Django.\n2. Back up the current db.sqlite3.\n3. Replace it with database/db.sqlite3 from this ZIP.\n4. Restore the media folder beside manage.py if needed.\n5. Start Django and run python manage.py check.\n')
         response=HttpResponse(buffer.getvalue(),content_type='application/zip')
-        response['Content-Disposition']=f'attachment; filename="mega_fish_point_backup_{stamp}.zip"'
+        response['Content-Disposition']=f'attachment; filename="Msumari_jr_backup_{stamp}.zip"'
         return response
     finally:
         if temp_path and os.path.exists(temp_path):

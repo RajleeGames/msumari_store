@@ -38,7 +38,7 @@ class Product(models.Model):
     BASE_UNIT_CHOICES = [
      ('PCS', 'Piece'),
      ('BTL', 'Bottle'),
-     ('CAN', 'Can'),
+     ('CARTON', 'Carton'),
      ('KG', 'Kilogram'),
      ('G', 'Gram'),
      ('L', 'Litre'),
