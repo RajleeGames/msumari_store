@@ -1,0 +1,9 @@
+{% extends 'base.html' %}{% load mfp %}
+{% block page_title %}Edit Purchase{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Edit PUR-{{ purchase.id|stringformat:'05d' }}</h1><p>Supplier, invoice and notes can be corrected. Quantity and buying cost stay locked to protect FIFO history.</p></div><a class="btn btn-secondary" href="{% url 'purchases' %}">Back</a></div>
+<div class="content-grid two-one">
+  <section class="card form-section-card"><div class="card-head"><div><h2>Purchase details</h2><p>These fields do not change stock quantity or cost.</p></div></div><form method="post" class="form-body">{% csrf_token %}<label>Supplier{{ form.supplier_name }}</label><label>Invoice / reference{{ form.invoice_number }}</label><label>Notes{{ form.notes }}</label><div class="form-actions"><a class="btn btn-secondary" href="{% url 'purchases' %}">Cancel</a><button class="btn btn-primary">Save details</button></div></form></section>
+  <section class="card"><div class="card-head"><div><h2>Locked stock</h2><p>To correct quantity/cost, delete the untouched purchase and receive it again.</p></div></div><div class="summary-list">{% for i in purchase.items.all %}<div><span>{{ i.product.name }}</span><strong>{{ i.quantity|qty }} {{ i.unit.symbol }}</strong></div><div><span>Cost / {{ i.unit.symbol }}</span><strong>{{ i.cost_per_unit|money }} TZS</strong></div><div><span>Total</span><strong>{{ i.total_cost|money }} TZS</strong></div>{% endfor %}</div></section>
+</div>
+{% endblock %}
