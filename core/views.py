@@ -36,7 +36,9 @@ from .forms import (
 )
 from .models import (
     Product, ProductUnit, Category, Sale, SaleItem, Purchase, Expense,
-    StockBatch, StockAdjustment, Customer, CustomerPayment, CashClosing, Stocktake, StocktakeLine,
+    StockBatch, StockAdjustment, Customer, CustomerPayment,
+    CashClosing, Stocktake, StocktakeLine,
+    PersonalReceivable, PersonalReceivablePayment,
 )
 from .services import (
     add_opening_stock, add_purchase, create_sale, void_sale,
@@ -77,6 +79,9 @@ def _user_has_history(user):
         user.stocktakes_created.exists(),
         user.stocktakes_posted.exists(),
         user.stocktakes_cancelled.exists(),
+
+        user.personal_receivables_created.exists(),
+        user.personal_receivable_payments_received.exists(),
     ])
 
 
@@ -1993,3 +1998,268 @@ def qz_sign(request):
             content_type='text/plain; charset=utf-8',
         )
 
+
+
+# -----------------------------------------------------------------------------
+# Ninaowadai - Manual receivables
+# -----------------------------------------------------------------------------
+
+@admin_required
+def ninaowadai(request):
+    today = timezone.localdate()
+
+    # ---------------------------------------------------------
+    # Create manual receivable
+    # ---------------------------------------------------------
+    if request.method == 'POST':
+        name = (request.POST.get('name') or '').strip()
+        phone = (request.POST.get('phone') or '').strip()
+        notes = (request.POST.get('notes') or '').strip()
+
+        amount = D(request.POST.get('amount_owed'))
+
+        if not name:
+            messages.error(request, 'Enter the name of the person who owes you.')
+            return redirect('ninaowadai')
+
+        if amount <= 0:
+            messages.error(request, 'Amount owed must be greater than zero.')
+            return redirect('ninaowadai')
+
+        owed_date_raw = (request.POST.get('owed_date') or '').strip()
+        due_date_raw = (request.POST.get('due_date') or '').strip()
+
+        owed_date = today
+        due_date = None
+
+        if owed_date_raw:
+            try:
+                owed_date = datetime.strptime(
+                    owed_date_raw,
+                    '%Y-%m-%d'
+                ).date()
+            except ValueError:
+                messages.error(request, 'Enter a valid owed date.')
+                return redirect('ninaowadai')
+
+        if due_date_raw:
+            try:
+                due_date = datetime.strptime(
+                    due_date_raw,
+                    '%Y-%m-%d'
+                ).date()
+            except ValueError:
+                messages.error(request, 'Enter a valid due date.')
+                return redirect('ninaowadai')
+
+        PersonalReceivable.objects.create(
+            name=name,
+            phone=phone,
+            amount_owed=amount,
+            owed_date=owed_date,
+            due_date=due_date,
+            notes=notes,
+            created_by=request.user,
+        )
+
+        messages.success(
+            request,
+            f'{name} added to Ninaowadai successfully.'
+        )
+
+        return redirect('ninaowadai')
+
+    # ---------------------------------------------------------
+    # List / search / filter
+    # ---------------------------------------------------------
+    q = (request.GET.get('q') or '').strip()
+    show = (request.GET.get('show') or 'open').strip()
+
+    records = list(
+        PersonalReceivable.objects
+        .select_related('created_by')
+        .annotate(
+            dashboard_paid=Sum('payments__amount')
+        )
+    )
+
+    # Normalize calculated fields.
+    for item in records:
+        item.dashboard_paid = item.dashboard_paid or Decimal('0')
+
+        remaining = item.amount_owed - item.dashboard_paid
+
+        item.dashboard_balance = (
+            remaining if remaining > Decimal('0')
+            else Decimal('0')
+        )
+
+    # Overall totals BEFORE search/filter.
+    total_original = sum(
+        (item.amount_owed for item in records),
+        Decimal('0')
+    )
+
+    total_paid = sum(
+        (item.dashboard_paid for item in records),
+        Decimal('0')
+    )
+
+    total_outstanding = sum(
+        (item.dashboard_balance for item in records),
+        Decimal('0')
+    )
+
+    open_count = sum(
+        1 for item in records
+        if item.dashboard_balance > 0
+    )
+
+    # Search.
+    if q:
+        needle = q.lower()
+
+        records = [
+            item for item in records
+            if (
+                needle in item.name.lower()
+                or needle in (item.phone or '').lower()
+                or needle in (item.notes or '').lower()
+                or needle in item.reference.lower()
+            )
+        ]
+
+    # Status filter.
+    if show == 'paid':
+        records = [
+            item for item in records
+            if item.dashboard_balance <= 0
+        ]
+
+    elif show != 'all':
+        records = [
+            item for item in records
+            if item.dashboard_balance > 0
+        ]
+
+    records.sort(
+        key=lambda item: (
+            -item.dashboard_balance,
+            item.name.lower()
+        )
+    )
+
+    return render(
+        request,
+        'ninaowadai.html',
+        {
+            'records': records[:300],
+            'q': q,
+            'show': show,
+            'today': today,
+            'total_original': total_original,
+            'total_paid': total_paid,
+            'total_outstanding': total_outstanding,
+            'open_count': open_count,
+            'payment_methods': PersonalReceivablePayment.METHOD_CHOICES,
+        }
+    )
+
+
+@admin_required
+@require_POST
+def ninaowadai_payment_create(request, pk):
+    receivable = get_object_or_404(
+        PersonalReceivable,
+        pk=pk
+    )
+
+    amount = D(request.POST.get('amount'))
+    method = (request.POST.get('method') or 'cash').strip()
+
+    if amount <= 0:
+        messages.error(
+            request,
+            'Payment amount must be greater than zero.'
+        )
+        return redirect('ninaowadai')
+
+    if method not in dict(PersonalReceivablePayment.METHOD_CHOICES):
+        messages.error(
+            request,
+            'Choose a valid payment method.'
+        )
+        return redirect('ninaowadai')
+
+    with transaction.atomic():
+        receivable = (
+            PersonalReceivable.objects
+            .select_for_update()
+            .get(pk=receivable.pk)
+        )
+
+        balance = receivable.balance
+
+        if balance <= 0:
+            messages.error(
+                request,
+                f'{receivable.name} has already paid the full amount.'
+            )
+            return redirect('ninaowadai')
+
+        if amount > balance:
+            messages.error(
+                request,
+                f'Payment cannot exceed the remaining balance of '
+                f'{balance:,.2f} TZS.'
+            )
+            return redirect('ninaowadai')
+
+        PersonalReceivablePayment.objects.create(
+            receivable=receivable,
+            amount=amount,
+            method=method,
+            reference=(
+                request.POST.get('reference') or ''
+            ).strip(),
+            notes=(
+                request.POST.get('notes') or ''
+            ).strip(),
+            received_by=request.user,
+        )
+
+    messages.success(
+        request,
+        f'Payment of {amount:,.2f} TZS recorded for '
+        f'{receivable.name}.'
+    )
+
+    return redirect('ninaowadai')
+
+
+@admin_required
+@require_POST
+def ninaowadai_delete(request, pk):
+    receivable = get_object_or_404(
+        PersonalReceivable,
+        pk=pk
+    )
+
+    if receivable.payments.exists():
+        messages.error(
+            request,
+            'This record already has payment history and cannot '
+            'be deleted.'
+        )
+
+        return redirect('ninaowadai')
+
+    name = receivable.name
+    receivable.delete()
+
+    messages.success(
+        request,
+        f'{name} removed from Ninaowadai.'
+    )
+
+    return redirect('ninaowadai')

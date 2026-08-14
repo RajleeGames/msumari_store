@@ -43,6 +43,23 @@ urlpatterns = [
     path('debts/customers/<int:pk>/payments/add/', views.customer_payment_create, name='customer_payment_create'),
     path('debts/payments/<int:pk>/void/', views.customer_payment_void, name='customer_payment_void'),
 
+    path(
+    'ninaowadai/',
+    views.ninaowadai,
+    name='ninaowadai'
+),
+
+path(
+    'ninaowadai/<int:pk>/payments/add/',
+    views.ninaowadai_payment_create,
+    name='ninaowadai_payment_create'
+),
+
+path(
+    'ninaowadai/<int:pk>/delete/',
+    views.ninaowadai_delete,
+    name='ninaowadai_delete'
+),
 
     path('end-day/', views.end_day, name='end_day'),
     path('end-day/<int:pk>/amend/', views.cash_closing_amend, name='cash_closing_amend'),

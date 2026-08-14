@@ -36,15 +36,17 @@ class Category(models.Model):
 class Product(models.Model):
 
     BASE_UNIT_CHOICES = [
-        ('PCS', 'Piece'),
-        ('KG', 'Kilogram'),
-        ('G', 'Gram'),
-        ('L', 'Litre'),
-        ('ML', 'Millilitre'),
-        ('M', 'Metre'),
-        ('CM', 'Centimetre'),
-        ('M2', 'Square Metre'),
-    ]
+     ('PCS', 'Piece'),
+     ('BTL', 'Bottle'),
+     ('CAN', 'Can'),
+     ('KG', 'Kilogram'),
+     ('G', 'Gram'),
+     ('L', 'Litre'),
+     ('ML', 'Millilitre'),
+     ('M', 'Metre'),
+     ('CM', 'Centimetre'),
+     ('M2', 'Square Metre'),
+        ]
 
     name = models.CharField(max_length=120, unique=True)
 
@@ -371,3 +373,99 @@ class StocktakeLine(models.Model):
         constraints=[models.UniqueConstraint(fields=['stocktake','product'],name='unique_product_per_stocktake')]
     def __str__(self): return f'{self.stocktake.reference} - {self.product.name}'
 
+
+
+class PersonalReceivable(models.Model):
+    name = models.CharField(max_length=120)
+    phone = models.CharField(max_length=40, blank=True)
+
+    amount_owed = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))]
+    )
+
+    owed_date = models.DateField(default=timezone.localdate)
+    due_date = models.DateField(null=True, blank=True)
+
+    notes = models.CharField(max_length=240, blank=True)
+
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='personal_receivables_created'
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-owed_date', '-id']
+
+    @property
+    def reference(self):
+        return f'OWE-{self.pk:05d}' if self.pk else 'Receivable'
+
+    @property
+    def payments_total(self):
+        return (
+            self.payments.aggregate(v=Sum('amount'))['v']
+            or ZERO
+        )
+
+    @property
+    def balance(self):
+        remaining = self.amount_owed - self.payments_total
+        return remaining if remaining > ZERO else ZERO
+
+    @property
+    def is_paid(self):
+        return self.balance <= ZERO
+
+    def __str__(self):
+        return f'{self.name} - {self.amount_owed}'
+
+
+class PersonalReceivablePayment(models.Model):
+    METHOD_CHOICES = [
+        ('cash', 'Cash'),
+        ('mobile_money', 'Mobile Money'),
+        ('bank', 'Bank'),
+    ]
+
+    receivable = models.ForeignKey(
+        PersonalReceivable,
+        on_delete=models.CASCADE,
+        related_name='payments'
+    )
+
+    amount = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))]
+    )
+
+    method = models.CharField(
+        max_length=30,
+        choices=METHOD_CHOICES,
+        default='cash'
+    )
+
+    reference = models.CharField(max_length=100, blank=True)
+    notes = models.CharField(max_length=180, blank=True)
+
+    paid_at = models.DateTimeField(default=timezone.now)
+
+    received_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='personal_receivable_payments_received'
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-paid_at', '-id']
+
+    def __str__(self):
+        return f'{self.receivable.name} - {self.amount}'

@@ -89,8 +89,8 @@
         </div>
 
         {# Finance: cashiers can access Expenses; Reports remains admin-only. #}
-        <div class="nav-group {% if request.resolver_match.url_name == 'expenses' or request.resolver_match.url_name == 'expense_add' or request.resolver_match.url_name == 'expense_edit' or request.resolver_match.url_name == 'reports' %}open active-group{% endif %}" data-nav-group="finance">
-          <button class="nav-group-toggle" type="button" aria-expanded="{% if request.resolver_match.url_name == 'expenses' or request.resolver_match.url_name == 'expense_add' or request.resolver_match.url_name == 'expense_edit' or request.resolver_match.url_name == 'reports' %}true{% else %}false{% endif %}" title="Finance">
+        <div class="nav-group {% if request.resolver_match.url_name == 'expenses' or request.resolver_match.url_name == 'expense_add' or request.resolver_match.url_name == 'expense_edit' or request.resolver_match.url_name == 'reports' or 'ninaowadai' in request.resolver_match.url_name %}open active-group{% endif %}" data-nav-group="finance">
+          <button class="nav-group-toggle" type="button" aria-expanded="{% if request.resolver_match.url_name == 'expenses' or request.resolver_match.url_name == 'expense_add' or request.resolver_match.url_name == 'expense_edit' or request.resolver_match.url_name == 'reports' or 'ninaowadai' in request.resolver_match.url_name %}true{% else %}false{% endif %}" title="Finance">
             <span class="ico" data-icon="reports"></span>
             <span class="nav-label">Finance</span>
             <span class="nav-group-chevron" aria-hidden="true"></span>
@@ -99,6 +99,7 @@
             <div class="nav-submenu-inner">
               <a href="{% url 'expenses' %}" class="nav-subitem {% if 'expense' in request.resolver_match.url_name %}active{% endif %}"><span class="nav-child-dot"></span><span>Expenses</span></a>
               {% if request.user.profile.role == 'admin' or request.user.is_superuser %}
+              <a href="{% url 'ninaowadai' %}" class="nav-subitem {% if 'ninaowadai' in request.resolver_match.url_name %}active{% endif %}"><span class="nav-child-dot"></span><span>Ninaowadai</span></a>
               <a href="{% url 'reports' %}" class="nav-subitem {% if request.resolver_match.url_name == 'reports' %}active{% endif %}"><span class="nav-child-dot"></span><span>Reports</span></a>
               {% endif %}
             </div>
@@ -167,6 +168,7 @@
               <a href="{% url 'end_day' %}" role="menuitem"><span data-icon="reports"></span><span>End Day</span></a>
               {% if request.user.profile.role == 'admin' or request.user.is_superuser %}
               <a href="{% url 'debts' %}" role="menuitem"><span data-icon="debts"></span><span>Debts</span></a>
+              <a href="{% url 'ninaowadai' %}" role="menuitem"><span data-icon="debts"></span><span>Ninaowadai</span></a>
               <a href="{% url 'settings' %}" role="menuitem"><span data-icon="settings"></span><span>Settings</span></a>
               {% endif %}
             </div>
@@ -208,6 +210,6 @@
 </div>
 
 {% block scripts %}{% endblock %}
-<script src="{% static 'core/app.js' %}?v=18"></script>
+<script src="{% static 'core/app.js' %}?v=19"></script>
 </body>
 </html>

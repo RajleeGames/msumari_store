@@ -191,6 +191,25 @@ document.addEventListener('DOMContentLoaded',()=>{
     openModal('voidPaymentModal',btn);
   }));
 
+  /* Ninaowadai manual receivable payment modal. */
+  const receivablePaymentForm=$('#receivablePaymentForm');
+  const receivablePaymentName=$('#receivablePaymentName');
+  const receivablePaymentBalance=$('#receivablePaymentBalance');
+  const receivablePaymentAmount=$('#receivablePaymentAmount');
+
+  $$('[data-receivable-payment-url]').forEach(btn=>btn.addEventListener('click',()=>{
+    const balance=Math.max(0,num(btn.dataset.receivableBalance));
+    if(receivablePaymentForm)receivablePaymentForm.action=btn.dataset.receivablePaymentUrl||'';
+    if(receivablePaymentName)receivablePaymentName.textContent=btn.dataset.receivableName||'Record money received.';
+    if(receivablePaymentBalance)receivablePaymentBalance.textContent=`${fmtMoney(balance)} TZS`;
+    if(receivablePaymentAmount){
+      receivablePaymentAmount.value='';
+      receivablePaymentAmount.max=String(balance);
+    }
+    openModal('receivablePaymentModal',btn);
+    setTimeout(()=>receivablePaymentAmount?.focus(),60);
+  }));
+
   /* Settings logo preview */
   const logoInput=$('#id_logo'), logoPreview=$('#logoPreview');
   logoInput?.addEventListener('change',()=>{

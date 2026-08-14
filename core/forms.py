@@ -40,13 +40,13 @@ class ProductUnitForm(forms.ModelForm):
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'e.g. Kilogram, 500 Gram, Tray',
+                'placeholder': 'e.g. Kilogram, 500 Gram, Carton',
                 'autocomplete': 'off',
             }),
 
             'symbol': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'e.g. Kg, g, Tray',
+                'placeholder': 'e.g. Kg, g, Carton',
                 'autocomplete': 'off',
             }),
 
@@ -80,7 +80,7 @@ class ProductUnitForm(forms.ModelForm):
             ),
 
             'symbol': (
-                'Short name shown in POS and receipts. Example: Kg, g, Tray.'
+                'Short name shown in POS and receipts. Example: Kg, g, or Carton.'
             ),
 
             'conversion_to_base': (
@@ -136,7 +136,7 @@ class ProductUnitForm(forms.ModelForm):
 
         if not symbol:
             raise forms.ValidationError(
-                'Enter a short symbol, for example Kg, g, Pc or Tray.'
+                'Enter a short symbol, for example Kg, g, Pc, Litre or Carton.'
             )
 
         return symbol
