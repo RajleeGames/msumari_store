@@ -252,6 +252,7 @@ class Expense(models.Model):
     CATEGORY_CHOICES = [
         ('electricity', 'Electricity'),
         ('water', 'Water'),
+        ('Food','Food'),
         ('transport', 'Transport'),
         ('fuel', 'Fuel'),
         ('rent', 'Rent'),
